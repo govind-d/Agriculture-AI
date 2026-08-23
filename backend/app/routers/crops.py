@@ -37,7 +37,7 @@ async def recommend_crop(
         raise HTTPException(status_code=503, detail="Gemini API key not configured.")
         
     genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-2.5-flash")
+    model = genai.GenerativeModel("gemini-3.6-flash")
     
     prompt = f"""
     You are an expert agronomist. Based on the following soil and weather conditions in India, recommend the best crop to grow.

@@ -131,7 +131,7 @@ async def list_available_markets():
 async def _fetch_price_from_gemini(crop: str, market: str) -> dict | None:
     """Fetch estimated crop prices using Gemini API."""
     genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-2.5-flash")
+    model = genai.GenerativeModel("gemini-3.6-flash")
     
     prompt = f"""
     You are an agricultural data assistant. Provide a realistic current market price for {crop} in the {market} market in India.

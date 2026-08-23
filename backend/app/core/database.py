@@ -17,7 +17,7 @@ async def connect_db():
 
     # Create indexes
     await _create_indexes()
-    print(f"✅ Connected to MongoDB: {settings.MONGODB_DB_NAME}")
+    print(f"Connected to MongoDB: {settings.MONGODB_DB_NAME}")
 
 
 async def close_db():
@@ -25,7 +25,7 @@ async def close_db():
     global _client
     if _client:
         _client.close()
-        print("✅ MongoDB connection closed")
+        print("MongoDB connection closed")
 
 
 def get_db() -> AsyncIOMotorDatabase:
@@ -75,4 +75,4 @@ async def _create_indexes():
     # Chat sessions
     await db.chat_sessions.create_index("farmerId")
 
-    print("✅ MongoDB indexes created")
+    print("MongoDB indexes created")

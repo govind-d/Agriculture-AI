@@ -45,7 +45,7 @@ async def analyze_disease(
         raise HTTPException(status_code=503, detail="Gemini API key not configured.")
         
     genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-2.5-flash")
+    model = genai.GenerativeModel("gemini-3.6-flash")
     
     prompt = """
     You are an expert plant pathologist. Analyze this image of a plant leaf.

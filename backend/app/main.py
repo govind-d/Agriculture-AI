@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     # Startup
     await connect_db()
-    print("🚀 Agriculture Guardian API is ready (Serverless Mode)")
+    print("Agriculture Guardian API is ready (Serverless Mode)")
     yield
     # Shutdown
     await close_db()
