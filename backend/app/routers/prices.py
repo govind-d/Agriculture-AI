@@ -116,6 +116,60 @@ async def get_price_trends(
     }
 
 
+@router.get("/market-trends")
+async def get_market_trends(
+    crop_name: str = "Rice",
+    market: str = "Delhi",
+    user: dict = Depends(get_current_user),
+):
+    """
+    Combined market overview for a crop: current price, trend direction and an
+    AI-written forecast narrative. This is the shape the MarketPrices UI renders.
+    """
+    db = get_db()
+    cache_key_crop = crop_name.lower().strip()
+    cache_key_market = market.lower().strip()
+
+    cached = await db.market_trends_cache.find_one({
+        "cropType": cache_key_crop,
+        "market": cache_key_market,
+    })
+    if cached:
+        return {
+            "crop": crop_name,
+            "market": market,
+            "currentPrice": cached["currentPrice"],
+            "trend": cached["trend"],
+            "forecast": cached["forecast"],
+            "source": "cached",
+        }
+
+    overview = None
+    if settings.GEMINI_API_KEY:
+        overview = await _fetch_market_trends_from_gemini(crop_name, market)
+
+    if overview is None:
+        overview = _get_mock_market_trends(crop_name, market)
+        source = "demo"
+    else:
+        source = "gemini"
+        await db.market_trends_cache.update_one(
+            {"cropType": cache_key_crop, "market": cache_key_market},
+            {
+                "$set": {
+                    "currentPrice": overview["currentPrice"],
+                    "trend": overview["trend"],
+                    "forecast": overview["forecast"],
+                    "fetchedAt": datetime.now(timezone.utc),
+                    "expiresAt": datetime.now(timezone.utc) + timedelta(hours=12),
+                }
+            },
+            upsert=True,
+        )
+
+    return {"crop": crop_name, "market": market, **overview, "source": source}
+
+
 @router.get("/crops")
 async def list_available_crops():
     """List available crops for price queries."""
@@ -180,4 +234,66 @@ def _get_mock_price(crop: str, market: str) -> dict:
         "price": mock_prices.get(crop, 2000),
         "unit": "₹/quintal",
         "priceDate": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+    }
+
+
+VALID_TRENDS = {"Rising", "Falling", "Stable"}
+
+
+async def _fetch_market_trends_from_gemini(crop: str, market: str) -> dict | None:
+    """Ask Gemini for current price, trend direction and a short forecast narrative."""
+    genai.configure(api_key=settings.GEMINI_API_KEY)
+    model = genai.GenerativeModel("gemini-3.6-flash")
+
+    prompt = f"""
+    You are an agricultural market analyst. Give a realistic current market assessment
+    for {crop} in the {market} market in India.
+    Respond ONLY with a valid JSON object, no markdown fences and no other text:
+    {{
+        "price": <current_price_in_INR_per_quintal_as_number>,
+        "trend": "Rising" | "Falling" | "Stable",
+        "forecast": "<2-4 sentences on the near-term price outlook and the main factors driving it>"
+    }}
+    """
+
+    try:
+        response = await model.generate_content_async(prompt)
+        text = response.text.strip()
+        if text.startswith("```json"):
+            text = text[7:-3].strip()
+        elif text.startswith("```"):
+            text = text[3:-3].strip()
+
+        data = json.loads(text)
+        trend = str(data.get("trend", "Stable")).strip().capitalize()
+        if trend not in VALID_TRENDS:
+            trend = "Stable"
+
+        forecast = str(data.get("forecast", "")).strip()
+        if not forecast:
+            return None
+
+        return {
+            "currentPrice": {
+                "price": round(float(data["price"]), 2),
+                "unit": "quintal",
+            },
+            "trend": trend,
+            "forecast": forecast,
+        }
+    except Exception:
+        return None
+
+
+def _get_mock_market_trends(crop: str, market: str) -> dict:
+    """Deterministic fallback overview when Gemini is unavailable."""
+    base = _get_mock_price(crop, market)
+    return {
+        "currentPrice": {"price": base["price"], "unit": "quintal"},
+        "trend": "Stable",
+        "forecast": (
+            f"Demo data - no live market feed is configured, so this is an indicative "
+            f"price for {crop} in {market}. Set GEMINI_API_KEY in backend/.env to get a "
+            f"real AI-generated price outlook."
+        ),
     }

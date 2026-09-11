@@ -63,6 +63,12 @@ async def _create_indexes():
         [("cropType", 1), ("market", 1)], unique=True
     )
 
+    # Market trends cache — TTL auto-delete
+    await db.market_trends_cache.create_index("expiresAt", expireAfterSeconds=0)
+    await db.market_trends_cache.create_index(
+        [("cropType", 1), ("market", 1)], unique=True
+    )
+
     # Pest alerts
     await db.pest_alerts.create_index("region")
     await db.pest_alerts.create_index("issuedAt")

@@ -6,6 +6,11 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import DiseaseDetection from './pages/DiseaseDetection';
+import CropAdvisor from './pages/CropAdvisor';
+import FertilizerAdvisor from './pages/FertilizerAdvisor';
+import MarketPrices from './pages/MarketPrices';
+import AIChatbot from './pages/AIChatbot';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -24,14 +29,14 @@ function App() {
         
         <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
-          {/* We will add other routes here later */}
-          <Route path="disease-detection" element={<div className="animate-fade-in"><h2>Disease Detection (Coming Soon)</h2></div>} />
-          <Route path="crops" element={<div className="animate-fade-in"><h2>Crop Advisor (Coming Soon)</h2></div>} />
-          <Route path="fertilizer" element={<div className="animate-fade-in"><h2>Fertilizer (Coming Soon)</h2></div>} />
-          <Route path="market" element={<div className="animate-fade-in"><h2>Market Prices (Coming Soon)</h2></div>} />
-          <Route path="chat" element={<div className="animate-fade-in"><h2>AI Chatbot (Coming Soon)</h2></div>} />
+          <Route path="disease-detection" element={<DiseaseDetection />} />
+          <Route path="crops" element={<CropAdvisor />} />
+          <Route path="fertilizer" element={<FertilizerAdvisor />} />
+          <Route path="market" element={<MarketPrices />} />
+          <Route path="chat" element={<AIChatbot />} />
         </Route>
       </Routes>
+
     </BrowserRouter>
   );
 }

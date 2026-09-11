@@ -51,10 +51,12 @@ async def recommend_crop(
     
     Respond ONLY with a valid JSON object in this format:
     {{
-        "recommendedCrop": "Crop Name",
-        "confidence": 0.95,
-        "alternatives": ["Alt Crop 1", "Alt Crop 2"],
-        "reasoning": "A short explanation of why this crop is suitable."
+        "topCrops": [
+            {{"crop": "Crop Name", "confidence": 0.95}},
+            {{"crop": "Alternative Crop 1", "confidence": 0.80}},
+            {{"crop": "Alternative Crop 2", "confidence": 0.65}}
+        ],
+        "insight": "A short explanation of why these crops are suitable."
     }}
     """
     
@@ -67,6 +69,23 @@ async def recommend_crop(
             text = text[3:-3].strip()
             
         result = json.loads(text)
+        
+        # Ensure frontend compatibility (topCrops and insight must be present)
+        if "topCrops" not in result:
+            recommended_crop = result.get("recommendedCrop", "Unknown Crop")
+            confidence = result.get("confidence", 1.0)
+            alternatives = result.get("alternatives", [])
+            
+            top_crops = [{"crop": recommended_crop, "confidence": confidence}]
+            alt_confidence = confidence
+            for alt in alternatives:
+                alt_confidence = max(0.1, alt_confidence - 0.15)
+                top_crops.append({"crop": alt, "confidence": alt_confidence})
+            result["topCrops"] = top_crops
+            
+        if "insight" not in result:
+            result["insight"] = result.get("reasoning", "Suitable conditions for crop cultivation.")
+            
     except Exception as e:
         print(f"Gemini error: {e}")
         raise HTTPException(
@@ -78,3 +97,4 @@ async def recommend_crop(
         **result,
         "warnings": warnings,
     }
+
