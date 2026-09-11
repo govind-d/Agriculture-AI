@@ -22,7 +22,9 @@ const Login = () => {
       });
 
       localStorage.setItem('token', response.data.accessToken);
-      
+      // Kept so api.js can renew the 15-minute access token without a re-login
+      localStorage.setItem('refreshToken', response.data.refreshToken);
+
       // Fetch user profile to store user info (Optional but good)
       // localStorage.setItem('user', JSON.stringify(userData));
 
