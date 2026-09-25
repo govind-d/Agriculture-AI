@@ -19,13 +19,31 @@ from app.models.schemas import RegisterRequest, LoginRequest, RefreshRequest
 router = APIRouter()
 
 
+def _phone_variants(phone: str) -> list[str]:
+    """
+    Forms an Indian mobile number may be stored in, canonical (+91XXXXXXXXXX) first.
+    Lets "9000000000", "+91 90000-00000" and "09000000000" all match the same user,
+    including older accounts stored without the +91 prefix.
+    """
+    digits = "".join(ch for ch in phone if ch.isdigit())
+    if len(digits) == 12 and digits.startswith("91"):
+        digits = digits[2:]
+    elif len(digits) == 11 and digits.startswith("0"):
+        digits = digits[1:]
+    if len(digits) != 10:
+        return [phone.strip()]
+    return [f"+91{digits}", digits]
+
+
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(req: RegisterRequest):
     """Register a new farmer/user."""
     db = get_db()
 
-    # Check if phone already exists
-    existing = await db.users.find_one({"phone": req.phone})
+    # Check if phone already exists, in any of its written forms
+    phone_variants = _phone_variants(req.phone)
+    req.phone = phone_variants[0]
+    existing = await db.users.find_one({"phone": {"$in": phone_variants}})
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -76,7 +94,7 @@ async def login(req: LoginRequest):
     """Login with phone + password."""
     db = get_db()
 
-    user = await db.users.find_one({"phone": req.phone})
+    user = await db.users.find_one({"phone": {"$in": _phone_variants(req.phone)}})
     if not user or not verify_password(req.password, user["passwordHash"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
