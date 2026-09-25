@@ -2,6 +2,7 @@
 MongoDB async connection using Motor.
 """
 
+import certifi
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from app.core.config import settings
 
@@ -12,12 +13,22 @@ _db: AsyncIOMotorDatabase | None = None
 async def connect_db():
     """Connect to MongoDB Atlas (or local) on startup."""
     global _client, _db
-    _client = AsyncIOMotorClient(settings.MONGODB_URI)
+    # Only use TLS CA file for Atlas (mongodb+srv) connections
+    kwargs = {"serverSelectionTimeoutMS": 10000}
+    if settings.MONGODB_URI.startswith("mongodb+srv"):
+        kwargs["tlsCAFile"] = certifi.where()
+
+    _client = AsyncIOMotorClient(settings.MONGODB_URI, **kwargs)
     _db = _client[settings.MONGODB_DB_NAME]
 
-    # Create indexes
-    await _create_indexes()
-    print(f"Connected to MongoDB: {settings.MONGODB_DB_NAME}")
+    # Create indexes — don't crash the app if Atlas is unreachable
+    try:
+        await _create_indexes()
+        print(f"Connected to MongoDB: {settings.MONGODB_DB_NAME}")
+    except Exception as e:
+        print(f"[WARNING] MongoDB connection warning: {e}")
+        print("   The app will start but DB operations may fail.")
+        print("   Check: 1) Atlas IP whitelist  2) Credentials  3) Network")
 
 
 async def close_db():
