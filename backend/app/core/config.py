@@ -32,8 +32,15 @@ class Settings(BaseSettings):
     # OpenWeatherMap
     OPENWEATHER_API_KEY: str = ""
 
-    # Google Gemini
+    # Google Gemini — each model has its own free-tier daily quota, so switching
+    # models here (no code change) is the quickest way around an exhausted quota
     GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-3.5-flash"
+    # Tried in order when the model above runs out of free quota for the day
+    GEMINI_FALLBACK_MODELS: str = (
+        "gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-3.7-flash,"
+        "gemini-3.8-flash,gemini-3-flash-preview"
+    )
 
 
     # Firebase Cloud Messaging

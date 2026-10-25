@@ -9,6 +9,7 @@ import google.generativeai as genai
 
 from app.core.database import get_db
 from app.core.config import settings
+from app.services.gemini import gemini_model
 from app.core.security import get_current_user
 
 router = APIRouter()
@@ -184,8 +185,7 @@ async def list_available_markets():
 
 async def _fetch_price_from_gemini(crop: str, market: str) -> dict | None:
     """Fetch estimated crop prices using Gemini API."""
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-3.6-flash")
+    model = gemini_model()
     
     prompt = f"""
     You are an agricultural data assistant. Provide a realistic current market price for {crop} in the {market} market in India.
@@ -242,8 +242,7 @@ VALID_TRENDS = {"Rising", "Falling", "Stable"}
 
 async def _fetch_market_trends_from_gemini(crop: str, market: str) -> dict | None:
     """Ask Gemini for current price, trend direction and a short forecast narrative."""
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-3.6-flash")
+    model = gemini_model()
 
     prompt = f"""
     You are an agricultural market analyst. Give a realistic current market assessment

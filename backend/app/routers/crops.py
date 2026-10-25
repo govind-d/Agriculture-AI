@@ -7,6 +7,8 @@ from fastapi import APIRouter, Depends
 from app.core.security import get_current_user
 from app.models.schemas import CropRecommendationRequest
 from app.services.validation import validate_and_clip_crop_inputs
+from app.services.ai_errors import QUOTA_MESSAGE, is_quota_error as _is_quota_error
+from app.services.gemini import gemini_model
 from app.core.config import settings
 import google.generativeai as genai
 import json
@@ -36,8 +38,7 @@ async def recommend_crop(
     if not settings.GEMINI_API_KEY:
         raise HTTPException(status_code=503, detail="Gemini API key not configured.")
         
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-3.6-flash")
+    model = gemini_model()
     
     prompt = f"""
     You are an expert agronomist. Based on the following soil and weather conditions in India, recommend the best crop to grow.
@@ -88,6 +89,8 @@ async def recommend_crop(
             
     except Exception as e:
         print(f"Gemini error: {e}")
+        if _is_quota_error(e):
+            raise HTTPException(status_code=429, detail=QUOTA_MESSAGE)
         raise HTTPException(
             status_code=500,
             detail="Error getting crop recommendation from AI. Please try again."

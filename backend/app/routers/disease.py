@@ -11,6 +11,8 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.core.config import settings
 from app.services.cloudinary_service import upload_image
+from app.services.ai_errors import QUOTA_MESSAGE, is_quota_error as _is_quota_error
+from app.services.gemini import gemini_model
 import google.generativeai as genai
 import json
 
@@ -44,8 +46,7 @@ async def analyze_disease(
     if not settings.GEMINI_API_KEY:
         raise HTTPException(status_code=503, detail="Gemini API key not configured.")
         
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-3.6-flash")
+    model = gemini_model()
     
     prompt = """
     You are an expert plant pathologist. Analyze this image of a plant leaf.
@@ -81,6 +82,8 @@ async def analyze_disease(
         raise
     except Exception as e:
         print(f"Gemini error: {e}")
+        if _is_quota_error(e):
+            raise HTTPException(status_code=429, detail=QUOTA_MESSAGE)
         raise HTTPException(
             status_code=500,
             detail="Error analyzing image with AI. Please try again."

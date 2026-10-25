@@ -5,6 +5,8 @@ Adapted from smart-agriculture-ai/services/chatbot_service.py
 
 import google.generativeai as genai
 from app.core.config import settings
+from app.services.ai_errors import QUOTA_MESSAGE, is_quota_error
+from app.services.gemini import gemini_model
 
 _model = None
 
@@ -23,8 +25,7 @@ def _get_model():
     """Lazily initialize the Gemini model."""
     global _model
     if _model is None and settings.GEMINI_API_KEY:
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        _model = genai.GenerativeModel("gemini-3.6-flash")
+        _model = gemini_model()
     return _model
 
 
@@ -60,4 +61,6 @@ def get_chatbot_response(user_message: str, chat_history: list = None) -> str:
         response = model.generate_content(full_prompt)
         return response.text
     except Exception as e:
+        if is_quota_error(e):
+            return QUOTA_MESSAGE
         return f"I'm having trouble responding right now. Please try again. (Error: {str(e)})"

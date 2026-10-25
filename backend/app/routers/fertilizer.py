@@ -7,6 +7,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from app.core.security import get_current_user
 from app.models.schemas import FertilizerRecommendationRequest
 from app.services.validation import validate_and_clip_fertilizer_inputs
+from app.services.ai_errors import QUOTA_MESSAGE, is_quota_error as _is_quota_error
+from app.services.gemini import gemini_model
 from app.core.config import settings
 import google.generativeai as genai
 import json
@@ -37,8 +39,7 @@ async def recommend_fertilizer(
     if not settings.GEMINI_API_KEY:
         raise HTTPException(status_code=503, detail="Gemini API key not configured.")
         
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel("gemini-3.6-flash")
+    model = gemini_model()
     
     prompt = f"""
     You are an expert agronomist. Recommend the best fertilizer based on the following field conditions:
@@ -79,6 +80,8 @@ async def recommend_fertilizer(
         
     except Exception as e:
         print(f"Gemini error: {e}")
+        if _is_quota_error(e):
+            raise HTTPException(status_code=429, detail=QUOTA_MESSAGE)
         raise HTTPException(
             status_code=500,
             detail="Error getting fertilizer recommendation from AI. Please try again."
